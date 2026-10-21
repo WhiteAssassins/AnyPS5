@@ -162,6 +162,10 @@ int APS5_VABI sceAppContentTemporaryDataMount2(uint32_t option, AppContentMountP
     return 0;
 }
 
+int APS5_VABI sceAppContentTemporaryDataMount(AppContentMountPoint* mountPoint) {
+    return sceAppContentTemporaryDataMount2(TEMPORARY_DATA_OPTION_FORMAT, mountPoint);
+}
+
 int APS5_VABI sceAppContentTemporaryDataUnmount(const AppContentMountPoint* mountPoint) {
     if (!mountPoint) return SCE_APP_CONTENT_ERROR_PARAMETER;
     auto& state = Temporary();
@@ -266,11 +270,6 @@ int APS5_VABI sceAppContentGetRegion(void) {
 }
 
 int APS5_VABI sceAppContentRequestPatchInstall(void) {
-    NotImplemented_nid_no_patch(__func__);
-    return 0;
-}
-
-int APS5_VABI sceAppContentTemporaryDataMount(void) {
     NotImplemented_nid_no_patch(__func__);
     return 0;
 }
