@@ -55,7 +55,7 @@ def command_line(arguments):
     return subprocess.list2cmdline(arguments) if os.name == "nt" else shlex.join(arguments)
 
 
-def conversion_options(args, patch):
+def conversion_arguments(args, patch):
     options = ["--patches", str(patch)]
     if args.skip_sce_module:
         options.append("--skip-sce-module")
@@ -65,7 +65,11 @@ def conversion_options(args, patch):
         options.extend(("--module-dir", module_dir))
     for executable in args.executable:
         options.extend(("--executable", executable))
-    return command_line(options)
+    return options
+
+
+def conversion_options(args, patch):
+    return command_line(conversion_arguments(args, patch))
 
 
 def read_catalog(directory, object_pairs_hook=None):
@@ -190,7 +194,7 @@ def main(argv=None):
     parser.add_argument("--list-verified", action="store_true", help="list every verified catalog entry without choosing one")
     parser.add_argument("--json", action="store_true", help="emit catalog decisions as JSON")
     args = parser.parse_args(argv)
-    report = {"status": "error", "entries": []}
+    report = {"schemaVersion": 1, "status": "error", "entries": []}
 
     def emit(*values, **options):
         if not args.json:
@@ -288,7 +292,8 @@ def main(argv=None):
             if verified[0] == 0 or verified[1] != verified[0] or verified[2] or verified[3]:
                 emit(f"{label}: rejected: relinker did not confirm every patch")
                 continue
-            record.update(status="verified", targets=targets, metadata=catalog_metadata)
+            record.update(status="verified", targets=targets, metadata=catalog_metadata,
+                          conversion_options=conversion_arguments(args, patch))
             matches.append((number, entry, patch, targets, catalog_metadata))
         id_counts = Counter(catalog_metadata["id"] for _, _, _, _, catalog_metadata in matches if "id" in catalog_metadata)
         if any(count > 1 for count in id_counts.values()):
@@ -297,8 +302,9 @@ def main(argv=None):
                 number, entry, patch, targets, catalog_metadata = match
                 identifier = catalog_metadata.get("id")
                 if identifier is not None and id_counts[identifier] > 1:
-                    next(record for record in report["entries"] if record["number"] == number).update(
-                        status="rejected", reason=f"duplicate verified id {identifier!r}")
+                    record = next(record for record in report["entries"] if record["number"] == number)
+                    record.pop("conversion_options", None)
+                    record.update(status="rejected", reason=f"duplicate verified id {identifier!r}")
                     emit(f"Catalog entry {number} ({entry['patch']!r}): rejected: duplicate verified id {identifier!r}")
                 else:
                     unique.append(match)
